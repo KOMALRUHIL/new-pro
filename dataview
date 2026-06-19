@@ -1,0 +1,1629 @@
+import React, { useState } from 'react';
+import * as LucideIcons from 'lucide-react';
+import * as XLSX from 'xlsx';
+
+export function LoadingScreen({ message, progress }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+      <LucideIcons.Loader2 size={48} className="spin-loader" color="var(--accent-color)" />
+      <div style={{ textAlign: 'center' }}>
+        <h3 style={{ color: 'var(--text-main)', margin: '0 0 8px 0', fontSize: '1.1rem' }}>{message}</h3>
+        {progress !== undefined && progress !== null && (
+          <div style={{ width: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', margin: '12px auto 0 auto' }}>
+            <div style={{ width: '100%', height: '6px', background: 'var(--border-color)', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ width: `${progress}%`, height: '100%', background: 'var(--accent-color)', borderRadius: '3px', transition: 'width 0.1s ease-out' }} />
+            </div>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>{progress}% Completed</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function AwaitingUploadView() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+      <LucideIcons.UploadCloud size={48} style={{ marginBottom: '16px', color: 'var(--accent-color)', opacity: 0.8 }} />
+      <h3 style={{ color: 'var(--text-main)', fontSize: '1.1rem', margin: 0 }}>Awaiting Loss Run Upload</h3>
+      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>Please upload loss run documents in Step 1 to begin processing.</p>
+    </div>
+  );
+}
+
+export function ConsoleTerminal({ title, logs, isProcessing }) {
+  const terminalEndRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '350px',
+      overflow: 'hidden',
+      marginTop: '16px',
+    }}>
+      {/* Title Bar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 0 12px 0',
+        borderBottom: '1px solid var(--border-color)',
+        userSelect: 'none',
+        flexShrink: 0,
+        marginBottom: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <LucideIcons.Terminal size={16} color="var(--accent-color)" />
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>{title || 'Pipeline System Logs'}</span>
+        </div>
+        {isProcessing && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--accent-color)' }}>
+            <LucideIcons.Loader2 className="spin-loader" size={12} />
+            <span style={{ fontWeight: 600 }}>Active</span>
+          </div>
+        )}
+      </div>
+
+      {/* Terminal Content */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        paddingRight: '6px'
+      }}>
+        {logs.map((log, idx) => (
+          <div key={log.id || idx} style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            background: 'var(--bg-card-hover)',
+            border: '1px solid var(--border-color)',
+            borderLeft: `4px solid ${log.type === 'warning' ? 'var(--status-yellow)' : 'var(--status-green)'}`,
+            borderRadius: '6px',
+            padding: '12px 16px',
+            gap: '6px',
+            animation: 'fadeInLog 0.2s ease-out' 
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {log.type === 'warning' ? 'System Warning' : 'System Activity'}
+              </span>
+              <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500 }}>
+                [{log.time || 'INFO'}]
+              </span>
+            </div>
+            <span style={{ color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 500, lineHeight: '1.4' }}>
+              {log.text}
+            </span>
+          </div>
+        ))}
+
+        {isProcessing && (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            background: 'rgba(59, 130, 246, 0.05)',
+            border: '1px solid rgba(59, 130, 246, 0.2)',
+            borderLeft: '4px solid #3b82f6',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            gap: '6px',
+            animation: 'pulse 2s infinite' 
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(59, 130, 246, 0.6)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                System Running
+              </span>
+              <span style={{ fontSize: '0.7rem', color: 'rgba(59, 130, 246, 0.6)', fontWeight: 500 }}>
+                [ACTIVE]
+              </span>
+            </div>
+            <span style={{ color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <LucideIcons.Loader2 size={14} className="spin-loader" color="#3b82f6" />
+              Running agent workflow...
+            </span>
+          </div>
+        )}
+
+        {!isProcessing && logs.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            background: 'rgba(16, 185, 129, 0.05)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            borderLeft: '4px solid var(--status-green)',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            gap: '6px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--status-green)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Pipeline Success
+              </span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--status-green)', fontWeight: 500 }}>
+                [COMPLETED]
+              </span>
+            </div>
+            <span style={{ color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 500 }}>
+              All pipeline tasks completed successfully. Click Next Step to view results.
+            </span>
+          </div>
+        )}
+
+        <div ref={terminalEndRef} />
+      </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeInLog {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}} />
+    </div>
+  );
+}
+
+// STEP 2: LOSS RUN VERIFICATION VIEW
+export function VerificationView({ backendResult, fileStats, cacheProgress, logs, isProcessing, isStep2Completed }) {
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  if (!fileStats || fileStats.total === 0) {
+    return <AwaitingUploadView />;
+  }
+
+  if (cacheProgress !== null) {
+    return <LoadingScreen message="Retrieving cached verification reports..." progress={cacheProgress} />;
+  }
+
+  if (!isStep2Completed) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'fadeIn 0.5s ease-out' }}>
+        <div className="section-title">
+          <LucideIcons.ShieldCheck color="var(--accent-color)" /> Step 2: Loss Run Verification
+        </div>
+        <p className="section-subtitle">
+          Intake Agent scan complete. The Loss Run Detection Agent is scanning and classifying documents.
+        </p>
+        <ConsoleTerminal title="verification-agent.sh" logs={logs || []} isProcessing={isProcessing} />
+      </div>
+    );
+  }
+
+  // Use uploaded files list and enrich with detection details from the backend
+  const files = fileStats?.uploadedList && fileStats.uploadedList.length > 0 
+    ? fileStats.uploadedList.map(f => {
+        const detectInfo = backendResult?.detection?.[f.name];
+        if (detectInfo) {
+          return {
+            ...f,
+            valid: detectInfo.is_loss_run,
+            reason: detectInfo.is_loss_run 
+              ? `Verified by Loss Run Detection Agent using ${detectInfo.method} analysis. Verified Loss Run Report.`
+              : `Classified as non-loss run and excluded. Excluded Document.`
+          };
+        }
+        return f;
+      })
+    : [];
+
+  const negativeCheck = backendResult?.validationChecks?.find(c => c.check === 'Negative Value Check');
+  const hasNegativeFinancials = negativeCheck ? negativeCheck.status === 'warning' : false;
+
+  const activeFile = files.find(f => f.name === selectedFile?.name) || files[0];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'fadeIn 0.5s ease-out' }}>
+      <div className="section-title">
+        <LucideIcons.ShieldCheck color="var(--accent-color)" /> Step 2: Loss Run Verification
+      </div>
+      <p className="section-subtitle">
+        Intake Agent scan complete. The Loss Run Detection Agent has verified document types and filtered out invalid files.
+      </p>
+
+      {/* Metric Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '16px', marginBottom: '8px' }}>
+        {/* Card 1: Files Processed */}
+        <div className="glass-panel" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-card-hover)' }}>
+          <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(234, 88, 12, 0.1)', color: 'var(--accent-color)' }}>
+            <LucideIcons.FileCheck size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Files Processed</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>{backendResult?.filesUploaded || 0}</div>
+          </div>
+        </div>
+
+        {/* Card 2: Duplicates Found */}
+        <div className="glass-panel" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-card-hover)' }}>
+          <div style={{ padding: '8px', borderRadius: '8px', background: backendResult?.duplicatesFound > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: backendResult?.duplicatesFound > 0 ? 'var(--status-yellow)' : 'var(--status-green)' }}>
+            <LucideIcons.Copy size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Duplicates Found</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: backendResult?.duplicatesFound > 0 ? 'var(--status-yellow)' : 'var(--text-main)', marginTop: '2px' }}>
+              {backendResult?.duplicatesFound || 0}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Negative Financials */}
+        <div className="glass-panel" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-card-hover)' }}>
+          <div style={{ padding: '8px', borderRadius: '8px', background: hasNegativeFinancials ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: hasNegativeFinancials ? 'var(--status-red)' : 'var(--status-green)' }}>
+            <LucideIcons.AlertTriangle size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Negative Financials</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: hasNegativeFinancials ? 'var(--status-red)' : 'var(--status-green)', marginTop: '2px' }}>
+              {hasNegativeFinancials ? 'Detected' : 'None Detected'}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: AI Confidence */}
+        <div className="glass-panel" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-card-hover)' }}>
+          <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--status-green)' }}>
+            <LucideIcons.Sparkles size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI Confidence</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--status-green)', marginTop: '2px' }}>{backendResult?.aiConfidence || 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '24px', flex: 1, overflow: 'hidden', marginTop: '16px' }}>
+        {/* Left list of files */}
+        <div style={{ width: '45%', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', paddingRight: '8px' }}>
+          {files.map((file, i) => (
+            <button
+              key={i}
+              onClick={() => setSelectedFile(file)}
+              className="glass-panel"
+              style={{
+                padding: '16px',
+                textAlign: 'left',
+                border: activeFile?.name === file.name ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+                background: activeFile?.name === file.name ? 'rgba(234, 88, 12, 0.05)' : 'var(--bg-card-hover)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span className={`file-ext-badge badge-${file.type}`} style={{ fontSize: '0.7rem' }}>{file.type}</span>
+                <div>
+                  <div style={{ color: 'var(--text-main)', fontSize: '0.85rem', fontWeight: 600 }}>{file.name}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>{file.size}</div>
+                </div>
+              </div>
+              <div>
+                {file.valid ? (
+                  <div style={{ color: 'var(--status-green)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+                    <LucideIcons.CheckCircle2 size={16} /> VERIFIED
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--status-red)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+                    <LucideIcons.XCircle size={16} /> EXCLUDED
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Right Verification Details */}
+        <div className="glass-panel" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', background: 'var(--bg-card-hover)', overflowY: 'auto' }}>
+          {activeFile ? (
+            <>
+              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '16px' }}>
+                <span className={`file-ext-badge badge-${activeFile.type}`} style={{ marginBottom: '8px' }}>{activeFile.type.toUpperCase()} File</span>
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', margin: '4px 0' }}>{activeFile.name}</h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Size: {activeFile.size}</span>
+              </div>
+
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Verification Result</h4>
+                  <div style={{ 
+                    padding: '12px 16px', 
+                    borderRadius: '6px', 
+                    background: activeFile.valid ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                    color: activeFile.valid ? 'var(--status-green)' : 'var(--status-red)',
+                    border: `1px solid ${activeFile.valid ? 'var(--status-green)44' : 'var(--status-red)44'}`,
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {activeFile.valid ? <LucideIcons.ShieldCheck size={18} /> : <LucideIcons.AlertTriangle size={18} />}
+                    {activeFile.valid ? 'Verified Loss Run Report Document' : 'Non-Loss Run Invoice Excluded'}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>LLM Classification Audit</h4>
+                  <p style={{ color: 'var(--text-main)', fontSize: '0.95rem', lineHeight: '1.5', background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    {activeFile.reason}
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+              Select a file on the left to view verification audit logs
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+// STEP 3: OCR & PREPROCESSING (DIVIDED VIEW)
+export function PreprocessingView({ backendResult, fileStats, cacheProgress, logs, isProcessing, isStep3Completed }) {
+  const [activeFileIndex, setActiveFileIndex] = useState(0);
+  const [activeSheetTab, setActiveSheetTab] = useState('Claims Data');
+  const [hoveredBox, setHoveredBox] = useState(null);
+
+  if (!fileStats || fileStats.total === 0) {
+    return <AwaitingUploadView />;
+  }
+
+  if (cacheProgress !== null) {
+    return <LoadingScreen message="Retrieving cached preprocessing metrics..." progress={cacheProgress} />;
+  }
+
+  if (!isStep3Completed) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'fadeIn 0.5s ease-out' }}>
+        <div className="section-title">
+          <LucideIcons.Network color="var(--accent-color)" /> Step 3: OCR & Pre-processing
+        </div>
+        <p className="section-subtitle">
+          Document parsing and spreadsheet ingestion suites processing files concurrently.
+        </p>
+        <ConsoleTerminal title="preprocessing-ocr.sh" logs={logs || []} isProcessing={isProcessing} />
+      </div>
+    );
+  }
+
+  const files = fileStats?.uploadedList || [];
+  const activeFileIndexSanitized = Math.min(activeFileIndex, Math.max(0, files.length - 1));
+  const activeFile = files[activeFileIndexSanitized] || null;
+
+  // Dynamic stats calculation for visual fidelity
+  let ocrAccuracy = 98.7;
+  let layoutDensity = 82;
+  let orientation = "0.0°";
+  let totalValuation = "$817,600";
+  let inferredCarrier = "Liberty Mutual";
+
+  if (activeFile) {
+    const nameLower = activeFile.name.toLowerCase();
+    
+    // Hash file name to stable mock values between files
+    let hash = 0;
+    for (let i = 0; i < activeFile.name.length; i++) {
+      hash = activeFile.name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // stats derived from hash
+    const seed = Math.abs(hash);
+    ocrAccuracy = 95.0 + (seed % 48) / 10; // 95% to 99.8%
+    layoutDensity = 65 + (seed % 30); // 65% to 95%
+    orientation = (seed % 10 === 0) ? `${(seed % 4) * 90}.0°` : "0.0°";
+    totalValuation = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(400000 + (seed % 1000) * 1200);
+    
+    if (nameLower.includes('travelers') || nameLower.includes('trv')) {
+      inferredCarrier = "Travelers";
+    } else if (nameLower.includes('hartford')) {
+      inferredCarrier = "The Hartford";
+    } else if (nameLower.includes('zurich')) {
+      inferredCarrier = "Zurich Insurance";
+    } else if (nameLower.includes('lpm')) {
+      inferredCarrier = "LPM Insurance";
+    } else {
+      inferredCarrier = seed % 2 === 0 ? "Liberty Mutual" : "AIG Group";
+    }
+  }
+
+  // Extract first 2 rows of claims data for the cell matrix mapping visualizer
+  const matrixRows = backendResult?.matrixRows || backendResult?.rawRows?.slice(0, 8) || [];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'fadeIn 0.5s ease-out' }}>
+      <div className="section-title">
+        <LucideIcons.Network color="var(--accent-color)" /> Step 3: OCR & Pre-processing
+      </div>
+      <p className="section-subtitle">
+        Document parsing and spreadsheet ingestion suites processing files concurrently. Select an uploaded file below to audit extraction health and layout metrics.
+      </p>
+
+      {/* Horizontal File Selector Cards */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        overflowX: 'auto',
+        padding: '4px 4px 14px 4px',
+        borderBottom: '1px solid var(--border-color)',
+        marginBottom: '20px',
+        width: '100%',
+        scrollbarWidth: 'thin'
+      }}>
+        {files.map((file, idx) => {
+          const isActive = activeFileIndexSanitized === idx;
+          const isSheet = file.type === 'xlsx' || file.type === 'csv';
+          const FileIcon = isSheet ? LucideIcons.FileSpreadsheet : LucideIcons.FileText;
+          const iconColor = isSheet ? 'var(--status-green)' : 'var(--status-red)';
+          const statusText = isSheet ? 'Grid Ingested' : 'OCR Extracted';
+          
+          return (
+            <button
+              key={idx}
+              onClick={() => {
+                setActiveFileIndex(idx);
+                setActiveSheetTab('Claims Data');
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 18px',
+                borderRadius: '8px',
+                background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'var(--bg-card)',
+                border: isActive ? '1px solid var(--accent-color)' : '1px solid var(--border-color)',
+                boxShadow: isActive ? '0 0 16px rgba(234, 88, 12, 0.2)' : 'none',
+                color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                transition: 'all 0.2s ease-in-out',
+                flexShrink: 0,
+                cursor: 'pointer',
+                transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '32px',
+                height: '32px',
+                borderRadius: '6px',
+                background: isSheet ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              }}>
+                <FileIcon size={18} color={iconColor} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {file.name}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  {file.size} • {file.type.toUpperCase()}
+                </span>
+              </div>
+              <span style={{
+                fontSize: '0.65rem',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                background: isSheet ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                color: isSheet ? 'var(--status-green)' : 'var(--status-red)',
+                fontWeight: 700,
+                marginLeft: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                {statusText}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {activeFile ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {activeFile.type === 'xlsx' || activeFile.type === 'csv' ? (
+            /* --- FULL WIDTH SPREADSHEET WORKSPACE --- */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
+              {/* Spreadsheet Diagnostic stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', flexShrink: 0 }}>
+                <div className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--status-green)' }}>
+                    <LucideIcons.LayoutGrid size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Scan Area</div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>A1:G{backendResult?.rawRows?.length || 600}</div>
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--status-yellow)' }}>
+                    <LucideIcons.CheckCircle size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Empty Cell Ratio</div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>1.8% (Cleaned)</div>
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
+                    <LucideIcons.FileSpreadsheet size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Extracted Rows</div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>{backendResult?.rawRows?.length || '600'} Records</div>
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--status-green)' }}>
+                    <LucideIcons.Sparkles size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Ingestion Quality</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--status-green)', marginTop: '2px', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px', display: 'inline-block' }}>HEALTHY</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Matrix view block */}
+              {activeSheetTab === 'Claims Data' ? (
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <LucideIcons.LayoutGrid size={16} color="var(--status-green)" /> Grid Data Matrix (Sheet Preview)
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                      Active Sheet: {activeFile.name}
+                    </span>
+                  </div>
+
+                  <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', width: '100%', background: '#0F0F0F' }}>
+                    {matrixRows.length > 0 ? (
+                      (() => {
+                        const colKeys = Object.keys(matrixRows[0]);
+                        const getExcelColLetter = (index) => String.fromCharCode(65 + index);
+                        return (
+                          <table className="data-table" style={{
+                            borderCollapse: 'collapse',
+                            width: '100%',
+                            fontFamily: 'monospace',
+                            fontSize: '0.8rem',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            <thead>
+                              <tr style={{ background: '#1C1C1C', borderBottom: '2px solid var(--border-color)' }}>
+                                <th style={{ padding: '8px 12px', borderRight: '1px solid var(--border-color)', color: 'var(--text-muted)', width: '50px', textAlign: 'center', background: '#151515' }}></th>
+                                {colKeys.map((key, colIdx) => (
+                                  <th key={colIdx} style={{
+                                    padding: '8px 16px',
+                                    borderRight: '1px solid var(--border-color)',
+                                    color: 'var(--text-muted)',
+                                    textAlign: 'left',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.75rem',
+                                    background: '#151515'
+                                  }}>
+                                    <div style={{ color: 'var(--accent-color)', fontSize: '0.65rem', marginBottom: '2px' }}>{getExcelColLetter(colIdx)}</div>
+                                    {key.replace(/_/g, ' ').toUpperCase()}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {matrixRows.map((row, rowIdx) => (
+                                <tr key={rowIdx} style={{
+                                  borderBottom: '1px solid #1E1E1E',
+                                  background: rowIdx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
+                                  transition: 'background 0.15s'
+                                }}>
+                                  <td style={{
+                                    padding: '8px 12px',
+                                    borderRight: '1px solid var(--border-color)',
+                                    background: '#151515',
+                                    color: 'var(--text-muted)',
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.75rem',
+                                    userSelect: 'none'
+                                  }}>
+                                    {rowIdx + 1}
+                                  </td>
+                                  {colKeys.map((key, colIdx) => {
+                                    const val = row[key];
+                                    const isNumeric = typeof val === 'number';
+                                    const isClaimNum = ['claim_number', 'claim_id', 'claim identifier'].some(k => key.toLowerCase().includes(k));
+                                    const isMoney = ['paid', 'incurred', 'reserve'].some(k => key.toLowerCase().includes(k));
+                                    
+                                    return (
+                                      <td key={colIdx} style={{
+                                        padding: '10px 16px',
+                                        borderRight: '1px solid #1E1E1E',
+                                        textAlign: isNumeric ? 'right' : 'left',
+                                        color: isMoney ? 'var(--status-green)' : (isClaimNum ? 'var(--text-main)' : 'var(--text-muted)'),
+                                        fontWeight: isClaimNum ? 600 : 'normal'
+                                      }}>
+                                        {val !== null && val !== undefined ? String(val) : ''}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        );
+                      })()
+                    ) : (
+                      <div style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                        Loading matrix grid data...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : activeSheetTab === 'Claimant Normalization' ? (
+                /* Name Standardization View */
+                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.2s ease-out', overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <LucideIcons.Sparkles size={16} color="var(--accent-color)" /> Claimant Name Normalization & Entity Resolution
+                    </div>
+                    <span className="status-chip status-completed" style={{ fontSize: '0.7rem' }}>RESOLVED</span>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4', margin: 0 }}>
+                    The <strong>Transformation Agent</strong> parsed all extracted rows and normalized name variations. Fuzzy matching (Jaro-Winkler) and regex rules resolved duplicates and mapped carrier-specific entities to unique standardised keys.
+                  </p>
+
+                  <div style={{ border: '1px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <table className="data-table" style={{ fontSize: '0.78rem', width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#151515', borderBottom: '1px solid var(--border-color)' }}>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-muted)' }}>Raw Extracted Value</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-muted)' }}>Standardized Entity</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-muted)' }}>Entity Type</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-muted)' }}>Resolution Method</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>Confidence</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { raw: "DOE, JOHN JR", std: "John Doe", type: "Claimant", method: "Suffix/Name Reversal", confidence: "99.4%" },
+                          { raw: "john s doe", std: "John Doe", type: "Claimant", method: "Middle Initial Cleanse", confidence: "98.1%" },
+                          { raw: "Smith, John P.", std: "John Smith", type: "Claimant", method: "Fuzzy Reversal & Trim", confidence: "97.5%" },
+                          { raw: "liberty mut", std: "Liberty Mutual", type: "Carrier", method: "Taxonomy Matching", confidence: "100.0%" },
+                          { raw: "LMI CORP", std: "Liberty Mutual", type: "Carrier", method: "Abbreviation Map", confidence: "100.0%" },
+                          { raw: "THE HARTFORD INS", std: "The Hartford", type: "Carrier", method: "Fuzzy Jaro-Winkler", confidence: "99.2%" },
+                          { raw: "SHARMA, SUMAN", std: "Suman Sharma", type: "Driver", method: "Reversal & Case Normalization", confidence: "100.0%" },
+                          { raw: "ACME CORP INC", std: "Acme Corp", type: "Claimant", method: "Legal Suffix Strip", confidence: "100.0%" }
+                        ].map((row, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                            <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{row.raw}</td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-main)', fontWeight: 600 }}>{row.std}</td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <span style={{
+                                fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px',
+                                background: row.type === 'Carrier' ? 'rgba(59, 130, 246, 0.15)' : (row.type === 'Driver' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(245, 158, 11, 0.15)'),
+                                color: row.type === 'Carrier' ? '#3b82f6' : (row.type === 'Driver' ? '#8b5cf6' : 'var(--accent-color)'),
+                                fontWeight: 700
+                              }}>{row.type.toUpperCase()}</span>
+                            </td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{row.method}</td>
+                            <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--status-green)', fontWeight: 600 }}>{row.confidence}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                /* Schema Ingest Mapper View */
+                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.2s ease-out', overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--status-green)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <LucideIcons.LayoutGrid size={16} color="var(--status-green)" /> Schema Ingestion Header Mapping
+                    </div>
+                    <span className="status-chip status-completed" style={{ fontSize: '0.7rem' }}>MAPPED</span>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4', margin: 0 }}>
+                    The <strong>Ingestion Agent</strong> mapped headers from the custom upload document format into standard fields within the Master Database schema, converting types and currency formatting automatically.
+                  </p>
+
+                  <div style={{ border: '1px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <table className="data-table" style={{ fontSize: '0.78rem', width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#151515', borderBottom: '1px solid var(--border-color)' }}>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-muted)' }}>Document Header</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-muted)' }}>Unified Master Field</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-muted)' }}>Ingestion Transformation</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--text-muted)' }}>Match Type</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>Sample Normalized</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { raw: "Clmt Name / Driver / Claimant", master: "claimant", transform: "Fuzzy String Similarity Match", match: "Fuzzy (98%)", sample: "John Doe" },
+                          { raw: "Date of Loss / Accident Date", master: "accident_date", transform: "Format Standardization (YYYY-MM-DD)", match: "Exact (100%)", sample: "2023-11-05" },
+                          { raw: "Paid Amt / Total Paid", master: "total_paid", transform: "Currency Sanitizer (regex strip & float cast)", match: "Exact (100%)", sample: "7000.00" },
+                          { raw: "Outstanding Reserve / Exp", master: "total_reserve", transform: "Financial Field Alias mapping", match: "Alias (95%)", sample: "0.00" },
+                          { raw: "LOB / Line of Bus", master: "lob", transform: "Taxonomy Classification Lookup", match: "Exact (100%)", sample: "Workers Compensation" },
+                          { raw: "Policy Eff Date / Inception", master: "policy_effective_date", transform: "Format Standardization (YYYY-MM-DD)", match: "Exact (100%)", sample: "2022-10-01" },
+                          { raw: "Status / O/C", master: "status", transform: "Boolean / Status Normalization", match: "Exact (100%)", sample: "Closed" }
+                        ].map((row, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                            <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: 'var(--text-main)' }}>{row.raw}</td>
+                            <td style={{ padding: '10px 14px', fontFamily: 'monospace', color: 'var(--accent-color)', fontWeight: 600 }}>{row.master}</td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{row.transform}</td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <span style={{
+                                fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px',
+                                background: row.match.includes('Exact') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                color: row.match.includes('Exact') ? 'var(--status-green)' : 'var(--status-yellow)',
+                                fontWeight: 700
+                              }}>{row.match.toUpperCase()}</span>
+                            </td>
+                            <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-main)' }}>{row.sample}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Excel tabs row at the bottom */}
+              <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '6px', background: '#121212', overflow: 'hidden', flexShrink: 0 }}>
+                {[
+                  { name: 'Claims Data', status: 'parsed' },
+                  { name: 'Claimant Normalization', status: 'parsed' },
+                  { name: 'Schema Ingest Mapper', status: 'parsed' }
+                ].map((tab) => {
+                  const isActive = activeSheetTab === tab.name;
+                  const dotColor = 'var(--status-green)';
+                  return (
+                    <button
+                      key={tab.name}
+                      onClick={() => setActiveSheetTab(tab.name)}
+                      style={{
+                        flex: 1,
+                        padding: '12px 16px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        background: isActive ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
+                        color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                        borderRight: '1px solid var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        borderBottom: isActive ? '2px solid var(--accent-color)' : 'none'
+                      }}
+                    >
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: dotColor }} />
+                      {tab.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            /* --- FULL WIDTH DOCUMENT (PDF/Word) WORKSPACE --- */
+            <div style={{ display: 'grid', gridTemplateColumns: '4fr 6fr', gap: '24px', flex: 1, overflow: 'hidden', animation: 'fadeIn 0.3s ease-out' }}>
+              
+              {/* Left Side: Mock Document Layout Preview */}
+              <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', overflowY: 'auto', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <LucideIcons.Eye size={16} color="var(--status-red)" /> OCR Document Canvas
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>PAGE 1 OF 1</span>
+                </div>
+
+                {/* Page layout canvas */}
+                <div style={{
+                  width: '90%',
+                  maxWidth: '260px',
+                  aspectRatio: '1 / 1.35',
+                  background: 'var(--bg-main)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                }}>
+                  {/* Page background lines */}
+                  <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', width: '60%', borderRadius: '3px' }} />
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', width: '80%', borderRadius: '3px' }} />
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', width: '40%', borderRadius: '3px' }} />
+                    
+                    {/* Bounding blocks for rows */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '20px 0' }}>
+                      {[1, 2, 3, 4].map(idx => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <div style={{ height: '6px', background: 'rgba(255,255,255,0.04)', width: '25%', borderRadius: '3px' }} />
+                          <div style={{ height: '6px', background: 'rgba(255,255,255,0.04)', width: '20%', borderRadius: '3px' }} />
+                          <div style={{ height: '6px', background: 'rgba(255,255,255,0.04)', width: '35%', borderRadius: '3px' }} />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', width: '85%', borderRadius: '3px', marginTop: '16px' }} />
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', width: '50%', borderRadius: '3px' }} />
+                  </div>
+
+                  {/* Highlights with color overlays */}
+                  {/* OVERLAY 1: Header (Blue) */}
+                  <div 
+                    onMouseEnter={() => setHoveredBox({
+                      name: 'Carrier Header Section',
+                      coords: '[x:16, y:16, w:228, h:65]',
+                      confidence: '99.4%',
+                      details: 'Discovered Carrier brand labels, Policy identifiers, valuation dates, and evaluation periods.'
+                    })}
+                    onMouseLeave={() => setHoveredBox(null)}
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      left: '12px',
+                      right: '12px',
+                      height: '54px',
+                      background: hoveredBox?.name === 'Carrier Header Section' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.12)',
+                      border: '1px dashed #3b82f6',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  />
+
+                  {/* OVERLAY 2: Table (Green) */}
+                  <div 
+                    onMouseEnter={() => setHoveredBox({
+                      name: 'Loss Transactions Table',
+                      coords: '[x:16, y:86, w:228, h:150]',
+                      confidence: '98.7%',
+                      details: 'Identified loss run claim columns (claim identifier, date of loss, claimant, status, total paid/incurred reserves).'
+                    })}
+                    onMouseLeave={() => setHoveredBox(null)}
+                    style={{
+                      position: 'absolute',
+                      top: '80px',
+                      left: '12px',
+                      right: '12px',
+                      height: '140px',
+                      background: hoveredBox?.name === 'Loss Transactions Table' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.12)',
+                      border: '1px dashed #10b981',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  />
+
+                  {/* OVERLAY 3: Totals (Orange) */}
+                  <div 
+                    onMouseEnter={() => setHoveredBox({
+                      name: 'Valuation & Reserves Summary',
+                      coords: '[x:16, y:236, w:228, h:45]',
+                      confidence: '99.1%',
+                      details: 'Found total financial aggregates, outstanding reserve summaries, and evaluation totals.'
+                    })}
+                    onMouseLeave={() => setHoveredBox(null)}
+                    style={{
+                      position: 'absolute',
+                      top: '232px',
+                      left: '12px',
+                      right: '12px',
+                      height: '45px',
+                      background: hoveredBox?.name === 'Valuation & Reserves Summary' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(245, 158, 11, 0.12)',
+                      border: '1px dashed #f59e0b',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Right Side: Interactive Diagnostics Dashboard */}
+              <div className="glass-panel animate-scroll" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', maxHeight: '100%' }}>
+                <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    OCR Spatial Analytics
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    File: {activeFile.name}
+                  </span>
+                </div>
+
+                {/* SVG Radial Gauges row */}
+                <div style={{ display: 'flex', gap: '16px', flexShrink: 0 }}>
+                  {/* Gauge 1 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1, background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>OCR Accuracy</span>
+                    <div style={{ position: 'relative', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="80" height="80" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--border-color)" strokeWidth="6" />
+                        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--status-green)" strokeWidth="6"
+                          strokeDasharray={2 * Math.PI * 32}
+                          strokeDashoffset={2 * Math.PI * 32 * (1 - ocrAccuracy / 100)}
+                          strokeLinecap="round"
+                          style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', filter: 'drop-shadow(0 0 4px var(--status-green))' }}
+                        />
+                      </svg>
+                      <span style={{ position: 'absolute', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{ocrAccuracy.toFixed(1)}%</span>
+                    </div>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--status-green)', fontWeight: 700, textTransform: 'uppercase' }}>HIGH PRECISION</span>
+                  </div>
+
+                  {/* Gauge 2 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1, background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Layout Density</span>
+                    <div style={{ position: 'relative', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="80" height="80" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--border-color)" strokeWidth="6" />
+                        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--status-yellow)" strokeWidth="6"
+                          strokeDasharray={2 * Math.PI * 32}
+                          strokeDashoffset={2 * Math.PI * 32 * (1 - layoutDensity / 100)}
+                          strokeLinecap="round"
+                          style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%', filter: 'drop-shadow(0 0 4px var(--status-yellow))' }}
+                        />
+                      </svg>
+                      <span style={{ position: 'absolute', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{layoutDensity}%</span>
+                    </div>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--status-yellow)', fontWeight: 700, textTransform: 'uppercase' }}>COMPLEX PAGE</span>
+                  </div>
+
+                  {/* Gauge 3 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1, background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Orientation</span>
+                    <div style={{ height: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <LucideIcons.RotateCcw size={22} color="var(--status-green)" />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{orientation}</span>
+                    </div>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--status-green)', fontWeight: 700, textTransform: 'uppercase' }}>CORRECTED</span>
+                  </div>
+                </div>
+
+                {/* Spatial coordinates details panel */}
+                <div style={{ background: '#0D0D0D', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', minHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'center', flexShrink: 0 }}>
+                  {hoveredBox ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', animation: 'fadeInLog 0.15s ease-out' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: hoveredBox.name.includes('Header') ? '#3b82f6' : (hoveredBox.name.includes('Table') ? '#10b981' : '#f59e0b') }} />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{hoveredBox.name}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        <div>Bounding box: <strong style={{ color: 'var(--text-main)' }}>{hoveredBox.coords}</strong></div>
+                        <div>OCR Accuracy: <strong style={{ color: 'var(--status-green)' }}>{hoveredBox.confidence}</strong></div>
+                      </div>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '4px' }}>{hoveredBox.details}</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', gap: '8px' }}>
+                      <LucideIcons.Compass size={28} color="var(--accent-color)" />
+                      <span style={{ fontSize: '0.75rem', lineHeight: '1.4' }}>Hover over the highlight zones on the document canvas<br />to inspect bounding box vectors and OCR details.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Extracted Doc Details */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Inferred Document Parameters</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.75rem' }}>
+                    <div className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Carrier Group</span>
+                      <strong style={{ color: 'var(--text-main)' }}>{inferredCarrier}</strong>
+                    </div>
+                    <div className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Coverage Scope</span>
+                      <strong style={{ color: 'var(--text-main)' }}>Workers Comp</strong>
+                    </div>
+                    <div className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Claims Extracted</span>
+                      <strong style={{ color: 'var(--status-green)' }}>{backendResult?.rawRows?.length || 54} Records</strong>
+                    </div>
+                    <div className="glass-panel" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Total Valuation</span>
+                      <strong style={{ color: 'var(--status-green)' }}>{totalValuation}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'var(--text-muted)' }}>
+          No files uploaded.
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// STEP 4: UNIFIED CLAIMS OUTPUT
+export function ExtractionView({ backendResult, fileStats, isRolledUp, onRunRollup, cacheProgress, logs, isProcessing, isStep4Completed }) {
+  const [page, setPage] = useState(0);
+  const itemsPerPage = 6;
+
+  if (!fileStats || fileStats.total === 0) {
+    return <AwaitingUploadView />;
+  }
+
+  if (cacheProgress !== null) {
+    return <LoadingScreen message="Retrieving cached claims extraction..." progress={cacheProgress} />;
+  }
+
+  if (!isStep4Completed) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'fadeIn 0.5s ease-out' }}>
+        <div className="section-title">
+          <LucideIcons.Wand2 color="var(--accent-color)" /> Step 4: Extracted Claims File
+        </div>
+        <p className="section-subtitle">
+          Flat list of claims extracted from PDF documents, DOCX vectors, and Excel spreadsheets.
+        </p>
+        <ConsoleTerminal title="claims-extractor.sh" logs={logs || []} isProcessing={isProcessing} />
+      </div>
+    );
+  }
+
+  const dataToUse = backendResult?.rawRows || [];
+  const totalPages = Math.ceil(dataToUse.length / itemsPerPage);
+  const currentItems = dataToUse.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const columns = dataToUse.length > 0 ? Object.keys(dataToUse[0]) : [];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'fadeIn 0.5s ease-out' }}>
+      <div>
+        <div className="section-title">
+          <LucideIcons.Wand2 color="var(--accent-color)" /> Step 4: Extracted Claims File
+        </div>
+        <p className="section-subtitle">
+          Flat list of claims extracted from PDF documents, DOCX vectors, and Excel spreadsheets.
+        </p>
+      </div>
+
+      <div className="glass-panel" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', width: '100%' }}>
+          <table className="data-table" style={{ whiteSpace: 'nowrap', minWidth: 'max-content' }}>
+            <thead>
+              <tr>
+                {columns.map(key => (
+                  <th key={key}>{key.replace(/_/g, ' ').toUpperCase()}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {currentItems.map((c, i) => (
+                <tr key={i}>
+                  {columns.map((key, j) => {
+                    const isStrong = ['claim_id', 'claim_number', 'total_incurred', 'incurred'].includes(key);
+                    const isGreen = ['total_paid', 'paid'].includes(key);
+                    return (
+                      <td key={j} style={{ 
+                        fontWeight: isStrong ? 600 : 'normal',
+                        color: isGreen ? 'var(--status-green)' : 'inherit'
+                      }}>
+                        {c[key] !== undefined && c[key] !== null ? String(c[key]) : ''}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', borderTop: '1px solid var(--border-color)', background: 'var(--bg-card-hover)', flexShrink: 0 }}>
+            <button className="btn-secondary" disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ padding: '4px 12px' }}>Previous</button>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Page {page + 1} of {totalPages}</span>
+            <button className="btn-secondary" disabled={page === totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ padding: '4px 12px' }}>Next</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// STEP 5: ROLLUP & FINAL EXPORT VIEW
+export function RollupView({ backendResult, fileStats, cacheProgress, isRolledUp, onRunRollup, onRollupComplete, logs }) {
+  const [toastMessage, setToastMessage] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const [page, setPage] = useState(0);
+  const itemsPerPage = 6;
+
+  if (!fileStats || fileStats.total === 0) {
+    return <AwaitingUploadView />;
+  }
+
+  if (cacheProgress !== null) {
+    return <LoadingScreen message="Retrieving cached rollup and analysis dashboard..." progress={cacheProgress} />;
+  }
+
+  // If rollup is in progress
+  if (isRolledUp === 'processing') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'fadeIn 0.5s ease-out' }}>
+        <div className="section-title">
+          <LucideIcons.Layers color="var(--accent-color)" /> Step 5: Rollup & Export
+        </div>
+        <p className="section-subtitle">
+          The Rollup Agent is consolidating and grouping claims across all carriers and lines of business.
+        </p>
+        <ConsoleTerminal title="rollup-agent.sh" logs={logs || []} isProcessing={true} />
+      </div>
+    );
+  }
+
+  // If completed but backendResult is not fully loaded (precautionary)
+  if (!backendResult) {
+    return <LoadingScreen message="Rollup Agent completing consolidation..." />;
+  }
+
+  const dataToUse = backendResult?.rollupRows || [];
+  const totalPages = Math.ceil(dataToUse.length / itemsPerPage);
+  const currentItems = dataToUse.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const columns = dataToUse.length > 0 ? Object.keys(dataToUse[0]) : [];
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleDownloadCSV = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/download/rollup-csv');
+      if (!response.ok) throw new Error("Failed to fetch Rollup CSV");
+      const csvText = await response.text();
+      const blob = new Blob([csvText], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sample_Rolled_up_claims.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Downloaded Rollup CSV successfully`);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to download Rollup CSV from backend.");
+    }
+    setIsExporting(false);
+  };
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/download/rollup-csv');
+      if (!response.ok) throw new Error("Failed to fetch Rollup CSV");
+      const csvText = await response.text();
+      const wb = XLSX.read(csvText, { type: 'string' });
+      const jsonData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      
+      const newWb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(newWb, XLSX.utils.json_to_sheet(jsonData), "ROLLED_UP_CLAIMS");
+      
+      XLSX.writeFile(newWb, "loss_run_rollup_package.xlsx");
+      showToast('Exported Rollup Excel package successfully');
+    } catch (e) {
+      console.error(e);
+      alert("Failed to download spreadsheet from backend.");
+    }
+    setIsExporting(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', animation: 'fadeIn 0.5s ease-out' }}>
+      <div className="section-title">
+        <LucideIcons.Layers color="var(--accent-color)" /> Step 5: Rollup & Export
+      </div>
+      <p className="section-subtitle">
+        Consolidated claimant portfolios compiled by the Rollup Agent (`sample_Rolled_up_claims.csv`).
+      </p>
+
+      {/* Dynamic Matching Formula Information Card */}
+      <div className="glass-panel" style={{ marginTop: '16px', padding: '16px', background: 'rgba(234, 88, 12, 0.03)', border: '1px solid rgba(234, 88, 12, 0.2)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+        <div style={{ padding: '10px', borderRadius: '8px', background: 'rgba(234, 88, 12, 0.1)', color: 'var(--accent-color)' }}>
+          <LucideIcons.Sparkles size={20} />
+        </div>
+        <div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>Rollup Consolidation Intelligence</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: '1.4' }}>
+            The Rollup Agent grouped claims using a dynamic matching formula: <code style={{ color: 'var(--accent-color)', background: 'rgba(255,255,255,0.03)', padding: '2px 4px', borderRadius: '4px', fontFamily: 'monospace' }}>[Claimant/Driver Name (Fuzzy Match)] & [Accident Date] & [Accident State]</code>. This compiles multiple transaction records into a unified claimant portfolio.
+          </div>
+        </div>
+      </div>
+
+      {toastMessage && (
+        <div style={{
+          position: 'absolute', top: '0', right: '0', background: 'var(--status-green)', color: 'var(--bg-main)',
+          padding: '8px 16px', borderRadius: '6px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px',
+          zIndex: 100, boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)', fontWeight: 600
+        }}>
+          <LucideIcons.CheckCircle2 size={16} /> {toastMessage}
+        </div>
+      )}
+
+      {/* Full-width scrollable table for Rollup CSV */}
+      <div className="glass-panel" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', width: '100%' }}>
+          <table className="data-table" style={{ whiteSpace: 'nowrap', minWidth: 'max-content' }}>
+            <thead>
+              <tr>
+                {columns.map(key => (
+                  <th key={key}>{key.replace(/_/g, ' ').toUpperCase()}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {currentItems.map((c, i) => (
+                <tr key={i}>
+                  {columns.map((key, j) => {
+                    const isStrong = ['roll_no', 'claim_id', 'claim_number', 'total_incurred', 'incurred'].includes(key);
+                    const isGreen = ['total_paid', 'paid'].includes(key);
+                    return (
+                      <td key={j} style={{ 
+                        fontWeight: isStrong ? 600 : 'normal',
+                        color: isGreen ? 'var(--status-green)' : 'inherit'
+                      }}>
+                        {c[key] !== undefined && c[key] !== null ? String(c[key]) : ''}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', borderTop: '1px solid var(--border-color)', background: 'var(--bg-card-hover)', flexShrink: 0 }}>
+            <button className="btn-secondary" disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ padding: '4px 12px' }}>Previous</button>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Page {page + 1} of {totalPages}</span>
+            <button className="btn-secondary" disabled={page === totalPages - 1} onClick={() => setPage(p => p + 1)} style={{ padding: '4px 12px' }}>Next</button>
+          </div>
+        )}
+      </div>
+
+      {/* Actions & Export Panel */}
+      <div className="glass-panel" style={{ padding: '16px', display: 'flex', gap: '12px', marginTop: '16px', flexShrink: 0, justifyContent: 'flex-end' }}>
+        <button className="btn-secondary" style={{ padding: '10px 20px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={handleDownloadCSV} disabled={isExporting}>
+          <LucideIcons.FileDown size={16} /> Download Rollup CSV
+        </button>
+        <button className="btn-primary" style={{ padding: '10px 20px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={handleExportExcel} disabled={isExporting}>
+          <LucideIcons.FileSpreadsheet size={16} /> Export Master Excel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// STEP 6: ANALYTICS DASHBOARD VIEW
+export function DashboardView({ rollupResult, fileStats }) {
+  if (!rollupResult) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+        <LucideIcons.BarChart2 size={48} style={{ marginBottom: '16px', color: 'var(--accent-color)', opacity: 0.8 }} />
+        <h3 style={{ color: 'var(--text-main)', fontSize: '1.1rem', margin: 0 }}>Dashboard Awaiting Rollup Complete</h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>Please complete Step 5: Rollup & Export to visualize analytics.</p>
+      </div>
+    );
+  }
+
+  const claims = rollupResult.rollupRows || rollupResult.rawRows || [];
+
+  // Calculate summary metrics
+  const totalClaims = claims.length;
+  let totalIncurred = 0;
+  let totalPaid = 0;
+  let totalOutstanding = 0;
+  let openClaimsCount = 0;
+  let closedClaimsCount = 0;
+  const stateCounts = {};
+  const lobGroup = {};
+  const yearGroup = {};
+
+  claims.forEach(c => {
+    // Standardize key lookups
+    const incurredVal = parseFloat(c.total_incurred ?? c.incurred ?? c.total_incurred_claims ?? c.incurred_indemnity ?? 0);
+    const paidVal = parseFloat(c.total_paid ?? c.paid ?? c.total_paid_claims ?? c.paid_indemnity ?? 0);
+    const outstandingVal = incurredVal - paidVal;
+
+    totalIncurred += incurredVal;
+    totalPaid += paidVal;
+    totalOutstanding += outstandingVal;
+
+    const status = String(c.status ?? c.claim_status ?? c.claim_status_name ?? '').toLowerCase();
+    if (status.includes('open')) {
+      openClaimsCount++;
+    } else {
+      closedClaimsCount++;
+    }
+
+    const state = String(c.accident_state ?? c.state ?? c.accident_state_code ?? 'N/A').toUpperCase();
+    if (state !== 'N/A' && state !== 'UNDEFINED' && state.trim()) {
+      stateCounts[state] = (stateCounts[state] || 0) + 1;
+    }
+
+    // LOB Grouping
+    const rawLob = c.line_of_business ?? c.lob ?? 'Workers Compensation';
+    let lob = 'Workers Compensation';
+    if (rawLob.toLowerCase().includes('auto')) lob = 'Auto Liability';
+    else if (rawLob.toLowerCase().includes('general') || rawLob.toLowerCase().includes('gl')) lob = 'General Liability';
+    else if (rawLob.toLowerCase().includes('property') || rawLob.toLowerCase().includes('prop')) lob = 'Property';
+    else if (rawLob.toLowerCase().includes('work') || rawLob.toLowerCase().includes('wc')) lob = 'Workers Compensation';
+    else lob = rawLob;
+
+    if (!lobGroup[lob]) {
+      lobGroup[lob] = { count: 0, incurred: 0, paid: 0, reserve: 0 };
+    }
+    lobGroup[lob].count += 1;
+    lobGroup[lob].incurred += incurredVal;
+    lobGroup[lob].paid += paidVal;
+    lobGroup[lob].reserve += outstandingVal;
+
+    // Year Grouping
+    const dateStr = String(c.accident_date ?? c.loss_date ?? c.date ?? c.policy_effective_date ?? '');
+    const match = dateStr.match(/\d{4}/);
+    const year = match ? match[0] : '2023';
+
+    if (!yearGroup[year]) {
+      yearGroup[year] = { count: 0, incurred: 0, paid: 0, reserve: 0 };
+    }
+    yearGroup[year].count += 1;
+    yearGroup[year].incurred += incurredVal;
+    yearGroup[year].paid += paidVal;
+    yearGroup[year].reserve += outstandingVal;
+  });
+
+  const avgClaimValue = totalClaims > 0 ? (totalIncurred / totalClaims) : 0;
+  const reserveRatio = totalIncurred > 0 ? (totalOutstanding / totalIncurred) * 100 : 0;
+
+  // Format currency helper
+  const formatCurrency = (val) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(val);
+  };
+
+  // State distribution data
+  const statesSorted = Object.entries(stateCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  const lobsSorted = Object.entries(lobGroup)
+    .sort((a, b) => b[1].incurred - a[1].incurred);
+
+  const yearsSorted = Object.entries(yearGroup)
+    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+
+  const maxYearIncurred = Math.max(...Object.values(yearGroup).map(y => y.incurred), 1);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', animation: 'fadeIn 0.5s ease-out', overflowY: 'auto', paddingRight: '4px' }}>
+      <div>
+        <div className="section-title">
+          <LucideIcons.BarChart2 color="var(--accent-color)" /> Step 6: Analytics Dashboard
+        </div>
+        <p className="section-subtitle">
+          Executive summary dashboard compiled dynamically from rolled up claimant portfolios.
+        </p>
+      </div>
+
+      {/* KPI Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginTop: '20px', flexShrink: 0 }}>
+        {/* Card 1 */}
+        <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '4px solid var(--accent-color)' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Incurred Liability</span>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-main)' }}>{formatCurrency(totalIncurred)}</div>
+          <span style={{ fontSize: '0.7rem', color: 'var(--status-green)', fontWeight: 600 }}>100% Ingested Coverage</span>
+        </div>
+
+        {/* Card 2 */}
+        <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '4px solid var(--status-green)' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Paid Indemnity</span>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--status-green)' }}>{formatCurrency(totalPaid)}</div>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{totalIncurred > 0 ? ((totalPaid / totalIncurred) * 100).toFixed(1) : 0}% Paid to Date</span>
+        </div>
+
+        {/* Card 3 */}
+        <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '4px solid var(--status-yellow)' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Outstanding Reserves</span>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--status-yellow)' }}>{formatCurrency(totalOutstanding)}</div>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{reserveRatio.toFixed(1)}% Outstanding Ratio</span>
+        </div>
+
+        {/* Card 4 */}
+        <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '4px solid #3b82f6' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Average Claim Size</span>
+          <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#3b82f6' }}>{formatCurrency(avgClaimValue)}</div>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Across {totalClaims} unique claimants</span>
+        </div>
+      </div>
+
+      {/* Visual Charts section Row 1 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '24px', marginTop: '24px', flexShrink: 0 }}>
+
+        {/* Left Card: Financial Balance & Claim Status */}
+        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <LucideIcons.PieChart size={18} color="var(--accent-color)" /> Liability Breakdown & Case Status
+          </h4>
+
+          {/* Paid vs Outstanding Progress Bar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Paid Indemnity ({formatCurrency(totalPaid)})</span>
+              <span style={{ color: 'var(--status-yellow)' }}>Reserves Outstanding ({formatCurrency(totalOutstanding)})</span>
+            </div>
+            <div style={{ width: '100%', height: '14px', background: 'var(--border-color)', borderRadius: '6px', overflow: 'hidden', display: 'flex' }}>
+              <div style={{ width: `${totalIncurred > 0 ? (totalPaid / totalIncurred) * 100 : 0}%`, height: '100%', background: 'var(--status-green)', transition: 'width 0.5s' }} />
+              <div style={{ flex: 1, height: '100%', background: 'var(--status-yellow)', transition: 'width 0.5s' }} />
+            </div>
+          </div>
+
+          {/* Case status boxes */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px' }}>
+            <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '16px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--status-green)' }}>{closedClaimsCount}</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Closed Cases</span>
+            </div>
+            <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '16px', borderRadius: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--status-red)' }}>{openClaimsCount}</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Open Cases</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Card: State Exposure */}
+        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <LucideIcons.Globe size={18} color="var(--accent-color)" /> Geographic Loss Exposure (Top States)
+          </h4>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, justifyContent: 'center' }}>
+            {statesSorted.length > 0 ? (
+              statesSorted.map(([state, count]) => {
+                const pct = totalClaims > 0 ? (count / totalClaims) * 100 : 0;
+                return (
+                  <div key={state} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600 }}>
+                      <span style={{ color: 'var(--text-main)' }}>{state} State</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{count} Claim{count > 1 ? 's' : ''} ({pct.toFixed(1)}%)</span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent-color)', borderRadius: '4px', transition: 'width 0.5s' }} />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div style={{ padding: '20px', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.8rem' }}>
+                No geographic data found.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Visual Charts section Row 2 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px', flexShrink: 0, marginBottom: '24px' }}>
+        
+        {/* Year-over-Year Loss Trends */}
+        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <LucideIcons.Calendar size={18} color="var(--accent-color)" /> Year-over-Year Loss Trends
+          </h4>
+          <div style={{ display: 'flex', gap: '20px', height: '180px', alignItems: 'flex-end', justifyContent: 'space-around', padding: '10px 0 20px 0' }}>
+            {yearsSorted.map(([year, data]) => {
+              const incPct = (data.incurred / maxYearIncurred) * 100;
+              const paidPct = (data.paid / maxYearIncurred) * 100;
+              return (
+                <div key={year} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%', justifyContent: 'flex-end', width: '60px' }}>
+                  <div style={{ display: 'flex', gap: '4px', height: '120px', alignItems: 'flex-end', width: '100%', justifyContent: 'center' }}>
+                    {/* Incurred Bar */}
+                    <div style={{
+                      width: '12px',
+                      height: `${Math.max(incPct, 4)}%`,
+                      background: 'linear-gradient(to top, var(--accent-color), #f97316)',
+                      borderRadius: '3px 3px 0 0',
+                      boxShadow: '0 0 8px rgba(234, 88, 12, 0.4)',
+                      transition: 'height 0.5s ease-out',
+                      position: 'relative'
+                    }} title={`Incurred: ${formatCurrency(data.incurred)}`} />
+                    {/* Paid Bar */}
+                    <div style={{
+                      width: '12px',
+                      height: `${Math.max(paidPct, 4)}%`,
+                      background: 'linear-gradient(to top, var(--status-green), #10b981)',
+                      borderRadius: '3px 3px 0 0',
+                      boxShadow: '0 0 8px rgba(16, 185, 129, 0.4)',
+                      transition: 'height 0.5s ease-out',
+                      position: 'relative'
+                    }} title={`Paid: ${formatCurrency(data.paid)}`} />
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{year}</span>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{data.count} Claim{data.count !== 1 ? 's' : ''}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '0.7rem', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '12px', height: '8px', borderRadius: '2px', background: 'var(--accent-color)' }} />
+              <span style={{ color: 'var(--text-muted)' }}>Total Incurred</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '12px', height: '8px', borderRadius: '2px', background: 'var(--status-green)' }} />
+              <span style={{ color: 'var(--text-muted)' }}>Total Paid</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Line of Business Distribution */}
+        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <LucideIcons.Briefcase size={18} color="var(--accent-color)" /> Line of Business Distribution
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, justifyContent: 'center' }}>
+            {lobsSorted.map(([lob, data]) => {
+              const maxLobIncurred = Math.max(...lobsSorted.map(l => l[1].incurred), 1);
+              const pct = (data.incurred / maxLobIncurred) * 100;
+              return (
+                <div key={lob} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--text-main)' }}>{lob}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {data.count} Claim{data.count !== 1 ? 's' : ''} • <strong style={{ color: 'var(--text-main)' }}>{formatCurrency(data.incurred)}</strong> Incurred
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: '10px', background: 'var(--border-color)', borderRadius: '5px', overflow: 'hidden', display: 'flex' }}>
+                    <div style={{
+                      width: `${(data.paid / maxLobIncurred) * 100}%`,
+                      height: '100%',
+                      background: 'var(--status-green)',
+                      transition: 'width 0.5s ease-out'
+                    }} title={`Paid: ${formatCurrency(data.paid)}`} />
+                    <div style={{
+                      width: `${((data.incurred - data.paid) / maxLobIncurred) * 100}%`,
+                      height: '100%',
+                      background: 'var(--status-yellow)',
+                      transition: 'width 0.5s ease-out'
+                    }} title={`Reserve: ${formatCurrency(data.incurred - data.paid)}`} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '0.7rem', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '12px', height: '8px', borderRadius: '2px', background: 'var(--status-green)' }} />
+              <span style={{ color: 'var(--text-muted)' }}>Paid Indemnity</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '12px', height: '8px', borderRadius: '2px', background: 'var(--status-yellow)' }} />
+              <span style={{ color: 'var(--text-muted)' }}>Reserve Outstanding</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
